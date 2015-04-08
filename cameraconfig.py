@@ -31,8 +31,8 @@ def getserial():
 
 pybcs.init_logging(logging.INFO)
 
-AK = 'QYMoLQA2ksLNt1wtdai3BlVz'         
-SK = 'ge5QYpJhG8fzl12qfzP3KuD3s0norHKG'    
+AK = ''         
+SK = ''    
 BUCKET='charmyinbucket'
 
 bcs = pybcs.BCS('http://bcs.duapp.com/', AK, SK, pybcs.HttplibHTTPC)  
