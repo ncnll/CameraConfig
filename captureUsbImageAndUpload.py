@@ -33,8 +33,8 @@ register_openers()
 
 with open("image.jpg", 'r') as f:
 	cpuserial = getserial()
-	datagen, headers = multipart_encode({"file":f,"cpuId":cpuserial,"index":"0","productItemId":"5565d304b09f8dd00cca2ff0"})
-	request = urllib2.Request("http://192.168.1.106:8091/index/uploadCameraPhoto",datagen, headers)
+	datagen, headers = multipart_encode({"file":f,"deviceCpuId":cpuserial,"index":"0","productItemId":"5565d304b09f8dd00cca2ff0", "viewIndex":"0"})
+	request = urllib2.Request("http://192.168.1.101:8091/index/uploadCameraPhoto",datagen, headers)
 	response = urllib2.urlopen(request)
 	print response.info()
 	print response.geturl()
