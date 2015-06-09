@@ -5,6 +5,10 @@ from pygame.locals import *
 from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
 
+from subprocess import Popen, PIPE
+
+(stdout, stderr) = Popen(["cat","foo.txt"], stdout=PIPE).communicate()
+
 import urllib2
 
 pygame.init()
