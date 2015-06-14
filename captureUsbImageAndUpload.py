@@ -27,7 +27,6 @@ def getserial():
 		cpuserial="Error00000000000"
 	return cpuserial
 
-
 cam = pygame.camera.Camera("/dev/video0",(1920, 1080))
 cam.start()
 image=cam.get_image()
@@ -40,6 +39,7 @@ with open("image.jpg", 'r') as f:
 	datagen, headers = multipart_encode({"file":f,"deviceCpuId":cpuserial,"index":"0","productItemId":"5565d304b09f8dd00cca2ff0", "viewIndex":"0"})
 	request = urllib2.Request("http://192.168.1.101:8091/index/uploadCameraPhoto",datagen, headers)
 	response = urllib2.urlopen(request)
+	#remote server not work storage in local server
 	print response.info()
 	print response.geturl()
 	print response.getcode()
