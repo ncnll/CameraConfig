@@ -5,9 +5,11 @@ import pygame.image
 from pygame.locals import *
 from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
-
+import time
 import threading
 import os
+import json
+import sqlite3
 
 #from subprocess import Popen, PIPE
 
@@ -17,6 +19,9 @@ import urllib2
 
 pygame.init()
 pygame.camera.init()
+
+###Get current milliseconds
+current_milli_time = lambda: int(round(time.time() * 1000))
 
 ########Get cpu serial number
 def getCpuSerial():
@@ -40,41 +45,64 @@ def dict_factory(cursor, row):
 
 #Get config table info
 def getCameraConfigInfo(serialNumber):
-	dict_factory = {"a":1,"b":2}
-	return dict_factory
+	#if db is not exist
+	directory_path = '/home/pi/database/uploadconfig/'
+	uploadConfig_file_path=directory_path+'uploadConfig.db'
+	if not os.path.exists(uploadConfig_file_path) :
+		return None
+	connPre = sqlite3.connect(uploadConfig_file_path)#/home/pi/database/test.db
+	cPre=connPre.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='CAMERACONFIG'")
+	row1 = cPre.fetchone()
+	if row1 is None :
+		return None
+	else : 
+		print row1[0]
+		cPre=connPre.execute("SELECT * FROM CAMERACONFIG")
+		row1 = cPre.fetchone()
+		print row1[0]
+		rowDict = dict_factory(cPre, row1)
+		return rowDict
+
+#Get config param by serialNumber then send to server
+def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
+	#Get config param
+	configDict = getCameraConfigInfo(serialNumber)
+	print configDict
+	#Send to local server
+	#Send to remote server
+	register_openers()#How to use this?
+	with open(uploadImageName, 'r') as f:
+		datagen, headers = multipart_encode({"file":f,"serialNumber":serialNumber,"index":"0","productItemId":"5565d304b09f8dd00cca2ff0", "viewIndex":"0"})
+		request = urllib2.Request("http://192.168.1.105:8091/index/uploadCameraPhoto", datagen, headers)
+		try:
+			response = urllib2.urlopen(request,timeout=30)
+			#print response.read()
+		except Exception, e:
+			print e
+			#Record failure
+	os.remove(uploadImageName)
 
 #capture onboard camera image and send to local and remote server
 def captureCSIImageAndSendOut(cpuSerial):
-	print cpuSerial
+	#print cpuSerial
 	configDict = getCameraConfigInfo(cpuSerial)
-	print configDict
+	#print configDict
 
 #capture usb camera image and send to local and remote server
 def captureUsbImageAndSendOut(usbSerial):
+	#Image name
+	imageName = str(current_milli_time())+".jpg"
 	#Capture image
 	try:
 		devicePath = "/dev/video"+usbSerial[-1:]
 		cam = pygame.camera.Camera(devicePath,(1920, 1080))
 		cam.start()
 		image=cam.get_image()
-		pygame.image.save(image, "image.jpg")
+		pygame.image.save(image, imageName)
 		cam.stop()
 	except Exception,e:
 		print str(e)
-	register_openers()
-	with open("image.jpg", 'r') as f:
-		cpuserial = getCpuSerial()
-		datagen, headers = multipart_encode({"file":f,"deviceCpuId":cpuserial,"index":"0","productItemId":"5565d304b09f8dd00cca2ff0", "viewIndex":"0"})
-		request = urllib2.Request("http://192.168.1.105:8091/index/uploadCameraPhoto", datagen, headers)
-		response = urllib2.urlopen(request)
-		#remote server not work storage in local server
-		print response.info()
-		print response.geturl()
-		print response.getcode()
-		print response.read()
-	print usbSerial
-	configDict = getCameraConfigInfo(usbSerial)
-	print configDict
+	sendImageToLocalAndRemoteServer(usbSerial, imageName)
 
 #Query camera config table to see whether should take a photo
 def inspectCameraConfig():
@@ -92,7 +120,7 @@ def inspectCameraConfig():
 ###Interval function to update config
 def inspectCameraConfigIntervalTimer():
 	#Update every 300 seconds
-	Timer(3, inspectCameraConfigIntervalTimer).start()
+	Timer(10, inspectCameraConfigIntervalTimer).start()
 	inspectCameraConfig()
 #Application Start 
 inspectCameraConfigIntervalTimer()
