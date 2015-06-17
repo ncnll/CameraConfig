@@ -68,11 +68,14 @@ def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
 	#Get config param
 	configDict = getCameraConfigInfo(serialNumber)
 	print configDict
+	if configDict is None : 
+		return None
 	#Send to local server
+	#Compare time
 	#Send to remote server
 	register_openers()#How to use this?
 	with open(uploadImageName, 'r') as f:
-		datagen, headers = multipart_encode({"file":f,"serialNumber":serialNumber,"index":"0","productItemId":"5565d304b09f8dd00cca2ff0", "viewIndex":"0"})
+		datagen, headers = multipart_encode({"file":f,"serialNumber":configDict["serialNumber"],"index":"0", "viewIndex":"0"})
 		request = urllib2.Request("http://192.168.1.105:8091/index/uploadCameraPhoto", datagen, headers)
 		try:
 			response = urllib2.urlopen(request,timeout=30)
@@ -89,12 +92,12 @@ def captureCSIImageAndSendOut(cpuSerial):
 	#print configDict
 
 #capture usb camera image and send to local and remote server
-def captureUsbImageAndSendOut(usbSerial):
+def captureUsbImageAndSendOut(usbSerial, usbIndex):
 	#Image name
 	imageName = str(current_milli_time())+".jpg"
 	#Capture image
 	try:
-		devicePath = "/dev/video"+usbSerial[-1:]
+		devicePath = "/dev/video"+usbIndex
 		cam = pygame.camera.Camera(devicePath,(1920, 1080))
 		cam.start()
 		image=cam.get_image()
@@ -106,7 +109,6 @@ def captureUsbImageAndSendOut(usbSerial):
 
 #Query camera config table to see whether should take a photo
 def inspectCameraConfig():
-
 	#Add cpu serialNumber(onboard csi camera serialId)
 	boardCameraSerialNumber = getCpuSerial()
 	captureCSIImageAndSendOut(boardCameraSerialNumber)
@@ -114,7 +116,8 @@ def inspectCameraConfig():
 	stdout = os.listdir("/home/pi/v4l/by-id/")
 	for line in stdout:
 		usbserial=line[4:22]
-		captureUsbImageAndSendOut(usbserial)
+		usbIndex=line[-1:]
+		captureUsbImageAndSendOut(usbserial, usbIndex)
 
 #Iterate the config table periodically
 ###Interval function to update config
