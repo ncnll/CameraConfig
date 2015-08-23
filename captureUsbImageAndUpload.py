@@ -10,6 +10,7 @@ import threading
 import os
 import json
 import sqlite3
+from datetime import datetime
 
 #from subprocess import Popen, PIPE
 
@@ -35,6 +36,10 @@ def getCpuSerial():
 	except:
 		cpuserial="Error00000000000"
 	return cpuserial
+#Set cpu serial to global
+cpu_serial = getCpuSerial()
+#Current cameraConfigDict 
+cameraConfigDict = None #getCameraConfigInfo(cpuSerial)
 
 #Change row to dict
 def dict_factory(cursor, row):
@@ -73,7 +78,7 @@ def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
 	#Send to local server
 	#Compare time
 	#Send to remote server
-	register_openers()#How to use this?
+	register_openers()#Why to use this?
 	with open(uploadImageName, 'r') as f:
 		datagen, headers = multipart_encode({"file":f,"serialNumber":configDict["serialNumber"],"index":"0", "viewIndex":"0"})
 		request = urllib2.Request("http://192.168.1.105:8091/index/uploadCameraPhoto", datagen, headers)
@@ -85,49 +90,79 @@ def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
 			#Record failure
 	os.remove(uploadImageName)
 
+#Check is take photo time is arrived
+def isTakePhotoTimeIsOn():
+	latestUploadTime=datetime.strptime(cameraConfigDict["latestUploadTime"], "%Y-%m-%dT%H:%M:%S.%fZ")
+	currentTime = datetime.now()
+	totalDiff = (currentTime-latestUploadTime).total_seconds()
+	uploadShootInterval =int("0x"+cameraConfigDict["uploadShootInterval"], 0)
+	print cameraConfigDict
+	print '------------------------'
+	print uploadShootInterval
+	print totalDiff
+	if uploadShootInterval<=totalDiff :
+		return True
+	else : 
+		return False
+	#execSql = "UPDATE CAMERACONFIG SET cameraType=%d, localShootInterval=%d, uploadShootInterval=%d, workingTime='%s', localResolution='%s', remoteResolution='%s', updateTime='%s', startDate='%s', endDate='%s', uploadPath='%s' where serialNumber='%s' " % (responseJson['rows'][0]['cameraType'], responseJson['rows'][0]['localShootInterval'], responseJson['rows'][0]['uploadShootInterval'], str(responseJson['rows'][0]['workingTime']), str(responseJson['rows'][0]['localResolution']), str(responseJson['rows'][0]['remoteResolution']), str(responseJson['rows'][0]['updateTime']), str(responseJson['rows'][0]['startDate']), str(responseJson['rows'][0]['endDate']), str(responseJson['rows'][0]['uploadPath']),str(responseJson['rows'][0]['serialNumber']),)
+
 #capture onboard camera image and send to local and remote server
-def captureCSIImageAndSendOut(cpuSerial):
-	#print cpuSerial
-	configDict = getCameraConfigInfo(cpuSerial)
-	#print configDict
+def captureCSIImageAndSendOut():
+	isOn = isTakePhotoTimeIsOn()
+	if isOn:
+		print "SHOOOOOTTTTTing CSI image"
+
 
 #capture usb camera image and send to local and remote server
 def captureUsbImageAndSendOut(usbSerial, usbIndex):
-	#Image name
-	imageName = str(current_milli_time())+".jpg"
-	#Capture image
-	try:
-		devicePath = "/dev/video"+usbIndex
-		cam = pygame.camera.Camera(devicePath,(1920, 1080))
-		cam.start()
-		image=cam.get_image()
-		pygame.image.save(image, imageName)
-		cam.stop()
-	except Exception,e:
-		print str(e)
-	sendImageToLocalAndRemoteServer(usbSerial, imageName)
+	isOn = isTakePhotoTimeIsOn()
+	if isOn:
+		print "SHOOOOOTTTTTing USB image"
+		#Image name
+		imageName = str(current_milli_time())+".jpg"
+		#Capture image
+		try:
+			devicePath = "/dev/video"+usbIndex
+			cam = pygame.camera.Camera(devicePath,(1920, 1080))
+			cam.start()
+			image=cam.get_image()
+			pygame.image.save(image, imageName)
+			cam.stop()
+		except Exception,e:
+			print str(e)
+		sendImageToLocalAndRemoteServer(usbSerial, imageName)
+	else:
+		print "Usb send time is not arrived!--"+usbSerial
 
 #Query camera config table to see whether should take a photo
 def inspectCameraConfig():
+	global cameraConfigDict
 	#Add cpu serialNumber(onboard csi camera serialId)
-	boardCameraSerialNumber = getCpuSerial()
-	captureCSIImageAndSendOut(boardCameraSerialNumber)
+	#boardCameraSerialNumber = getCpuSerial()
+	#CSI camera
+	cameraConfigDict = getCameraConfigInfo(cpu_serial)
+	captureCSIImageAndSendOut()
 	#Add usb camera serialNumber
 	stdout = os.listdir("/home/pi/v4l/by-id/")
 	for line in stdout:
 		usbserial=line[4:22]
 		usbIndex=line[-1:]
-		captureUsbImageAndSendOut(usbserial, usbIndex)
+		#check is device exists
+		isVideoDeviceExists = os.path.exists("/dev/video"+usbIndex)
+		#print isVideoDeviceExists
+		if isVideoDeviceExists:
+			print 'doing isVideoDeviceExists'
+			cameraConfigDict = getCameraConfigInfo(usbserial)
+			#captureUsbImageAndSendOut(usbserial, usbIndex)
 
 #Iterate the config table periodically
 ###Interval function to update config
 def inspectCameraConfigIntervalTimer():
 	#Update every 300 seconds
-	Timer(10, inspectCameraConfigIntervalTimer).start()
+	Timer(3, inspectCameraConfigIntervalTimer).start()
 	inspectCameraConfig()
 #Application Start 
 inspectCameraConfigIntervalTimer()
 
 
 
-	

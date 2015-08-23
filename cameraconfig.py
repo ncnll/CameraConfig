@@ -9,6 +9,8 @@ import json
 import sqlite3
 #import threading
 
+#current_cpuseiral = "0000000000000000"
+
 ########Get cpu serial number 
 def getserial():
 	cpuseiral = "0000000000000000"
@@ -21,6 +23,9 @@ def getserial():
 	except:
 		cpuserial="Error00000000000"
 	return cpuserial
+
+#Get current cpu seiral
+current_cpuseiral = getserial()
 
 #check whether /home/pi/database/uploadConfig.db is exists, if not, create a new one
 directory_path = '/home/pi/database/uploadconfig/'
@@ -38,7 +43,7 @@ row1 = cPre.fetchone()
 if row1 is not None :
 	print row1[0]
 else :
-	c.execute('''CREATE TABLE CAMERACONFIG(serialNumber text, cameraType integer, localShootInterval integer, uploadShootInterval integer, workingTime text, localResolution text, remoteResolution text, updateTime text, startDate text, endDate text, uploadPath text)''')
+	connPre.execute('''CREATE TABLE CAMERACONFIG(serialNumber text, cameraType integer, localShootInterval integer, uploadShootInterval integer, workingTime text, localResolution text, remoteResolution text, updateTime text, startDate text, endDate text, latestUploadTime text, uploadPath text)''')
 	#need commit?
 	print 'table is not exists'
 
@@ -70,7 +75,7 @@ def updateCameraConfig():
 		else : 
 			para_dct['search_gt_updateTime'] = "1988-08-08T08:08:08.008Z"	
 		para_dct['search_eq_serialNumber'] = serialNumber
-
+		#para_dct['search_eq_cpuseiral'] = current_cpuseiral
 		#print para_dct
 		url = """http://192.168.1.105:8091/device/camera/searchList"""
 		para_data = urllib.urlencode(para_dct)
@@ -88,10 +93,10 @@ def updateCameraConfig():
 			#Save to database
 			execSql = None
 			if configRow is not None:
-				execSql = "UPDATE CAMERACONFIG SET cameraType=%d, localShootInterval=%d, uploadShootInterval=%d, workingTime='%s', localResolution='%s', remoteResolution='%s', updateTime='%s', startDate='%s', endDate='%s', uploadPath='%s' where serialNumber='%s' " % (responseJson['rows'][0]['cameraType'], responseJson['rows'][0]['localShootInterval'], responseJson['rows'][0]['uploadShootInterval'], str(responseJson['rows'][0]['workingTime']), str(responseJson['rows'][0]['localResolution']), str(responseJson['rows'][0]['remoteResolution']), str(responseJson['rows'][0]['updateTime']), str(responseJson['rows'][0]['startDate']), str(responseJson['rows'][0]['endDate']), str(responseJson['rows'][0]['uploadPath']),str(responseJson['rows'][0]['serialNumber']),)
+				execSql = "UPDATE CAMERACONFIG SET cameraType=%d, localShootInterval=%d, uploadShootInterval=%d, workingTime='%s', localResolution='%s', remoteResolution='%s', updateTime='%s', startDate='%s', endDate='%s', uploadPath='%s' where serialNumber='%s' " % (responseJson['rows'][0]['cameraType'], responseJson['rows'][0]['localShootInterval'], responseJson['rows'][0]['uploadShootInterval'], str(responseJson['rows'][0]['workingTime']), str(responseJson['rows'][0]['localResolution']), str(responseJson['rows'][0]['remoteResolution']), str(responseJson['rows'][0]['updateTime']), str(responseJson['rows'][0]['startDate']), str(responseJson['rows'][0]['endDate']), str(responseJson['rows'][0]['uploadPath']), str(responseJson['rows'][0]['serialNumber']),)
 			else :
 				#print str(insertSql)
-				execSql = "INSERT INTO CAMERACONFIG VALUES %s" % ((str(responseJson['rows'][0]['serialNumber']), format(responseJson['rows'][0]['cameraType'], 'x'), format(responseJson['rows'][0]['localShootInterval'], 'x'),format(responseJson['rows'][0]['uploadShootInterval'], 'x'), str(responseJson['rows'][0]['workingTime']), str(responseJson['rows'][0]['localResolution']), str(responseJson['rows'][0]['remoteResolution']), str(responseJson['rows'][0]['updateTime']), str(responseJson['rows'][0]['startDate']), str(responseJson['rows'][0]['endDate']), str(responseJson['rows'][0]['uploadPath'])),)
+				execSql = "INSERT INTO CAMERACONFIG VALUES %s" % ((str(responseJson['rows'][0]['serialNumber']), format(responseJson['rows'][0]['cameraType'], 'x'), format(responseJson['rows'][0]['localShootInterval'], 'x'),format(responseJson['rows'][0]['uploadShootInterval'], 'x'), str(responseJson['rows'][0]['workingTime']), str(responseJson['rows'][0]['localResolution']), str(responseJson['rows'][0]['remoteResolution']), str(responseJson['rows'][0]['updateTime']), str(responseJson['rows'][0]['startDate']), str(responseJson['rows'][0]['endDate']), str('1988-08-08T08:08:08.008Z'), str(responseJson['rows'][0]['uploadPath'])),)
 			conn.execute(execSql)
 			conn.commit()
 			print execSql
@@ -99,7 +104,7 @@ def updateCameraConfig():
 ###Interval function to update config
 def updateCameraConfigIntervalTimer():
 	#Update every 300 seconds
-	Timer(300, updateCameraConfigIntervalTimer).start()
+	Timer(10, updateCameraConfigIntervalTimer).start()
 	updateCameraConfig()
 #Application Start 
 updateCameraConfigIntervalTimer()
