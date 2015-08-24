@@ -7,6 +7,7 @@ import os.path
 import os
 import json
 import sqlite3
+from datetime import datetime
 #import threading
 
 #current_cpuseiral = "0000000000000000"
@@ -53,6 +54,7 @@ else :
 
 ###### Update onboard camera config
 def updateCameraConfig():
+	print "2"
 	conn = sqlite3.connect(uploadConfig_file_path)
 	#Get all serialNumbers
 	serialNumberList = []
@@ -63,17 +65,17 @@ def updateCameraConfig():
 	for line in stdout:
 		usbserial=line[4:22]
 		serialNumberList.append(usbserial)
-
+	print serialNumberList
 	for serialNumber in serialNumberList:
 		#Request 
 		para_dct = {}
 		#Get last update time
 		c=conn.execute('SELECT * FROM CAMERACONFIG WHERE serialNumber=?', (serialNumber,))
 		configRow=c.fetchone()
-		if configRow is not None:
-			para_dct['search_gt_updateTime'] = configRow[7]
-		else : 
-			para_dct['search_gt_updateTime'] = "1988-08-08T08:08:08.008Z"	
+		#if configRow is not None:
+		#	para_dct['search_gt_updateTime'] = configRow[7]
+		#else : 
+			#para_dct['search_gt_updateTime'] = datetime.strptime("1988-08-08T08:08:08.008Z", "%Y-%m-%dT%H:%M:%S.%fZ")
 		para_dct['search_eq_serialNumber'] = serialNumber
 		#para_dct['search_eq_cpuseiral'] = current_cpuseiral
 		#print para_dct
@@ -104,7 +106,8 @@ def updateCameraConfig():
 ###Interval function to update config
 def updateCameraConfigIntervalTimer():
 	#Update every 300 seconds
-	Timer(10, updateCameraConfigIntervalTimer).start()
+	Timer(3, updateCameraConfigIntervalTimer).start()
+	print "1"
 	updateCameraConfig()
 #Application Start 
 updateCameraConfigIntervalTimer()

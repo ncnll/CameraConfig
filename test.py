@@ -1,6 +1,5 @@
 #!/usr/bin/python
 import time
-<<<<<<< HEAD
 from datetime import datetime
 #from dateutil.parser import parse
 #current_milli_time = lambda: int(round(time.time() * 1000))
@@ -19,9 +18,6 @@ print totl
 
 iii = {"uploadShootInterval":12}
 print iii["uploadShootInterval"]
-
-print int("0x"+iii["uploadShootInterval"], 0)
-=======
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 print current_milli_time()
@@ -42,4 +38,8 @@ print type(lastUploadRemoteTime)
 #print int(round(time.mktime(lastUploadRemoteTime)))
 secondsBetween = current_milli_time()/1000-int(round(time.mktime(lastUploadRemoteTime)))
 print secondsBetween/60
->>>>>>> 04fa1b15f3953d8e880ac7aa68f1e32e922e67ea
+# 04fa1b15f3953d8e880ac7aa68f1e32e922e67ea
+
+
+
+print datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")

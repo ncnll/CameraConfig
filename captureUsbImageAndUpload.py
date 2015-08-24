@@ -10,7 +10,10 @@ import threading
 import os
 import json
 import sqlite3
+import picamera
 from datetime import datetime
+
+
 
 #from subprocess import Popen, PIPE
 
@@ -20,6 +23,10 @@ import urllib2
 
 pygame.init()
 pygame.camera.init()
+
+#Initiate the camera
+camera = picamera.PiCamera()
+camera.resolution = (1024, 768)
 
 ###Get current milliseconds
 current_milli_time = lambda: int(round(time.time() * 1000))
@@ -48,14 +55,18 @@ def dict_factory(cursor, row):
 		d[col[0]] = row[idx]
 	return d
 
-#Get config table info
-def getCameraConfigInfo(serialNumber):
+def getSqliteDBConnection():
 	#if db is not exist
 	directory_path = '/home/pi/database/uploadconfig/'
 	uploadConfig_file_path=directory_path+'uploadConfig.db'
 	if not os.path.exists(uploadConfig_file_path) :
 		return None
 	connPre = sqlite3.connect(uploadConfig_file_path)#/home/pi/database/test.db
+	return connPre
+
+#Get config table info
+def getCameraConfigInfo(serialNumber):
+	connPre = getSqliteDBConnection()
 	cPre=connPre.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='CAMERACONFIG'")
 	row1 = cPre.fetchone()
 	if row1 is None :
@@ -91,16 +102,21 @@ def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
 	os.remove(uploadImageName)
 
 #Check is take photo time is arrived
-def isTakePhotoTimeIsOn():
+#Check is take photo is closed
+def isTakePhotoOn():
 	latestUploadTime=datetime.strptime(cameraConfigDict["latestUploadTime"], "%Y-%m-%dT%H:%M:%S.%fZ")
 	currentTime = datetime.now()
 	totalDiff = (currentTime-latestUploadTime).total_seconds()
-	uploadShootInterval =int("0x"+cameraConfigDict["uploadShootInterval"], 0)
+	uploadShootInterval = cameraConfigDict["uploadShootInterval"]
 	print cameraConfigDict
 	print '------------------------'
 	print uploadShootInterval
 	print totalDiff
 	if uploadShootInterval<=totalDiff :
+		connPre = getSqliteDBConnection()
+		execsql = "UPDATE CAMERACONFIG SET latestUploadTime='%s' where serialNumber='%s' " % (str(datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")), str(cameraConfigDict["serialNumber"]),)
+		connPre.execute(execsql)
+		connPre.commit()
 		return True
 	else : 
 		return False
@@ -108,14 +124,25 @@ def isTakePhotoTimeIsOn():
 
 #capture onboard camera image and send to local and remote server
 def captureCSIImageAndSendOut():
-	isOn = isTakePhotoTimeIsOn()
+	isOn = isTakePhotoOn()
 	if isOn:
-		print "SHOOOOOTTTTTing CSI image"
+		try:
+			camera.start_preview()
+			# Camera warm-up time
+			time.sleep(2)
+			#Image name
+			fileName = str(current_milli_time())+".jpg"
+			camera.capture(fileName)
+			camera.stop_preview()
+			print "SHOOOOOTTTTTing CSI image"
+			sendImageToLocalAndRemoteServer(cpu_serial, fileName)
+		except Exception,e:
+			print str(e)
 
 
 #capture usb camera image and send to local and remote server
 def captureUsbImageAndSendOut(usbSerial, usbIndex):
-	isOn = isTakePhotoTimeIsOn()
+	isOn = isTakePhotoOn()
 	if isOn:
 		print "SHOOOOOTTTTTing USB image"
 		#Image name
@@ -128,9 +155,9 @@ def captureUsbImageAndSendOut(usbSerial, usbIndex):
 			image=cam.get_image()
 			pygame.image.save(image, imageName)
 			cam.stop()
+			sendImageToLocalAndRemoteServer(usbSerial, imageName)
 		except Exception,e:
 			print str(e)
-		sendImageToLocalAndRemoteServer(usbSerial, imageName)
 	else:
 		print "Usb send time is not arrived!--"+usbSerial
 
@@ -159,10 +186,7 @@ def inspectCameraConfig():
 ###Interval function to update config
 def inspectCameraConfigIntervalTimer():
 	#Update every 300 seconds
-	Timer(3, inspectCameraConfigIntervalTimer).start()
+	Timer(5, inspectCameraConfigIntervalTimer).start()
 	inspectCameraConfig()
 #Application Start 
 inspectCameraConfigIntervalTimer()
-
-
-
