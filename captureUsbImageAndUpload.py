@@ -13,8 +13,6 @@ import sqlite3
 import picamera
 from datetime import datetime
 
-
-
 #from subprocess import Popen, PIPE
 
 #(stdout, stderr) = Popen(["cat","foo.txt"], stdout=PIPE).communicate()
@@ -87,24 +85,40 @@ def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
 	if configDict is None : 
 		return None
 	#Send to local server
-	#Compare time
-	#Send to remote server
 	register_openers()#Why to use this?
 	with open(uploadImageName, 'r') as f:
 		datagen, headers = multipart_encode({"file":f,"serialNumber":configDict["serialNumber"],"index":"0", "viewIndex":"0", "cameraBoardUploadTime":str(current_milli_time())})
 		#request = urllib2.Request("http://192.168.1.105:3000/index/uploadCameraPhoto", datagen, headers)
 		#url should load from server, or changed by hand
 		#request = urllib2.Request("http://192.168.1.105:3000/upload/single", datagen, headers)
-		
 		headers["User-agent"] = "Mozilla/5.0"
 		print headers
-		request = urllib2.Request("http://182.254.132.226:3000/upload/single", datagen, headers)
+		request = urllib2.Request("http://192.168.1.105:3000/upload/single", datagen, headers)
 		try:
 			response = urllib2.urlopen(request,timeout=30)
 			#print response.read()
+			print "local is ok"
 		except Exception, e:
 			print e
 			#Record failure
+		#Compare time
+		#Send to remote server
+		is_remote_on = isRemoteTakePhotoOn()
+		if is_remote_on:
+			datagen, headers = multipart_encode({"file":f,"serialNumber":configDict["serialNumber"],"index":"0", "viewIndex":"0", "cameraBoardUploadTime":str(current_milli_time())})
+			print f
+			#request = urllib2.Request("http://192.168.1.105:3000/index/uploadCameraPhoto", datagen, headers)
+			#url should load from server, or changed by hand
+			#request = urllib2.Request("http://192.168.1.105:3000/upload/single", datagen, headers)
+			headers["User-agent"] = "Mozilla/5.0"
+			print headers
+			request = urllib2.Request("http://www.ncnll.com:3000/upload/single", datagen, headers)
+			try:
+				response = urllib2.urlopen(request,timeout=30)
+				#print response.read()
+				print "remote is ok"
+			except Exception, e:
+				print e
 	os.remove(uploadImageName)
 
 #Check is take photo time is arrived
