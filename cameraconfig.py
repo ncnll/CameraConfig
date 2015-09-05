@@ -44,7 +44,7 @@ row1 = cPre.fetchone()
 if row1 is not None :
 	print row1[0]
 else :
-	connPre.execute('''CREATE TABLE CAMERACONFIG(serialNumber text, cameraType integer, localShootInterval integer, uploadShootInterval integer, workingTime text, localResolution text, remoteResolution text, updateTime text, startDate text, endDate text, latestUploadTime text, uploadPath text)''')
+	connPre.execute('''CREATE TABLE CAMERACONFIG(serialNumber text, cameraType integer, localShootInterval integer, uploadShootInterval integer, workingTime text, localResolution text, remoteResolution text, updateTime text, startDate text, endDate text, latestUploadTime text, latestLocalUploadTime text, uploadPath text)''')
 	#need commit?
 	print 'table is not exists'
 
@@ -98,7 +98,7 @@ def updateCameraConfig():
 				execSql = "UPDATE CAMERACONFIG SET cameraType=%d, localShootInterval=%d, uploadShootInterval=%d, workingTime='%s', localResolution='%s', remoteResolution='%s', updateTime='%s', startDate='%s', endDate='%s', uploadPath='%s' where serialNumber='%s' " % (responseJson['rows'][0]['cameraType'], responseJson['rows'][0]['localShootInterval'], responseJson['rows'][0]['uploadShootInterval'], str(responseJson['rows'][0]['workingTime']), str(responseJson['rows'][0]['localResolution']), str(responseJson['rows'][0]['remoteResolution']), str(responseJson['rows'][0]['updateTime']), str(responseJson['rows'][0]['startDate']), str(responseJson['rows'][0]['endDate']), str(responseJson['rows'][0]['uploadPath']), str(responseJson['rows'][0]['serialNumber']),)
 			else :
 				#print str(insertSql)
-				execSql = "INSERT INTO CAMERACONFIG VALUES %s" % ((str(responseJson['rows'][0]['serialNumber']), format(responseJson['rows'][0]['cameraType'], 'x'), format(responseJson['rows'][0]['localShootInterval'], 'x'),format(responseJson['rows'][0]['uploadShootInterval'], 'x'), str(responseJson['rows'][0]['workingTime']), str(responseJson['rows'][0]['localResolution']), str(responseJson['rows'][0]['remoteResolution']), str(responseJson['rows'][0]['updateTime']), str(responseJson['rows'][0]['startDate']), str(responseJson['rows'][0]['endDate']), str('1988-08-08T08:08:08.008Z'), str(responseJson['rows'][0]['uploadPath'])),)
+				execSql = "INSERT INTO CAMERACONFIG VALUES %s" % ((str(responseJson['rows'][0]['serialNumber']), format(responseJson['rows'][0]['cameraType'], 'x'), format(responseJson['rows'][0]['localShootInterval'], 'x'),format(responseJson['rows'][0]['uploadShootInterval'], 'x'), str(responseJson['rows'][0]['workingTime']), str(responseJson['rows'][0]['localResolution']), str(responseJson['rows'][0]['remoteResolution']), str(responseJson['rows'][0]['updateTime']), str(responseJson['rows'][0]['startDate']), str(responseJson['rows'][0]['endDate']), str('1988-08-08T08:08:08.008Z'), str('1988-08-08T08:08:08.008Z'), str(responseJson['rows'][0]['uploadPath'])),)
 			conn.execute(execSql)
 			conn.commit()
 			print execSql

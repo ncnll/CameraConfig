@@ -91,8 +91,14 @@ def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
 	#Send to remote server
 	register_openers()#Why to use this?
 	with open(uploadImageName, 'r') as f:
-		datagen, headers = multipart_encode({"file":f,"serialNumber":configDict["serialNumber"],"index":"0", "viewIndex":"0"})
-		request = urllib2.Request("http://192.168.1.105:8091/index/uploadCameraPhoto", datagen, headers)
+		datagen, headers = multipart_encode({"file":f,"serialNumber":configDict["serialNumber"],"index":"0", "viewIndex":"0", "cameraBoardUploadTime":str(current_milli_time())})
+		#request = urllib2.Request("http://192.168.1.105:3000/index/uploadCameraPhoto", datagen, headers)
+		#url should load from server, or changed by hand
+		#request = urllib2.Request("http://192.168.1.105:3000/upload/single", datagen, headers)
+		
+		headers["User-agent"] = "Mozilla/5.0"
+		print headers
+		request = urllib2.Request("http://182.254.132.226:3000/upload/single", datagen, headers)
 		try:
 			response = urllib2.urlopen(request,timeout=30)
 			#print response.read()
@@ -103,15 +109,36 @@ def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
 
 #Check is take photo time is arrived
 #Check is take photo is closed
-def isTakePhotoOn():
+def isLocalTakePhotoOn():
+	latestUploadTime=datetime.strptime(cameraConfigDict["latestLocalUploadTime"], "%Y-%m-%dT%H:%M:%S.%fZ")
+	currentTime = datetime.now()
+	totalDiff = (currentTime-latestUploadTime).total_seconds()
+	uploadShootInterval = cameraConfigDict["localShootInterval"]
+	#print cameraConfigDict
+	#print '------------------------'
+	#print uploadShootInterval
+	#print totalDiff
+	if uploadShootInterval<=totalDiff :
+		connPre = getSqliteDBConnection()
+		execsql = "UPDATE CAMERACONFIG SET latestLocalUploadTime='%s' where serialNumber='%s' " % (str(datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")), str(cameraConfigDict["serialNumber"]),)
+		connPre.execute(execsql)
+		connPre.commit()
+		return True
+	else : 
+		return False
+	#execSql = "UPDATE CAMERACONFIG SET cameraType=%d, localShootInterval=%d, uploadShootInterval=%d, workingTime='%s', localResolution='%s', remoteResolution='%s', updateTime='%s', startDate='%s', endDate='%s', uploadPath='%s' where serialNumber='%s' " % (responseJson['rows'][0]['cameraType'], responseJson['rows'][0]['localShootInterval'], responseJson['rows'][0]['uploadShootInterval'], str(responseJson['rows'][0]['workingTime']), str(responseJson['rows'][0]['localResolution']), str(responseJson['rows'][0]['remoteResolution']), str(responseJson['rows'][0]['updateTime']), str(responseJson['rows'][0]['startDate']), str(responseJson['rows'][0]['endDate']), str(responseJson['rows'][0]['uploadPath']),str(responseJson['rows'][0]['serialNumber']),)
+
+#Check is take photo time is arrived
+#Check is take photo is closed
+def isRemoteTakePhotoOn():
 	latestUploadTime=datetime.strptime(cameraConfigDict["latestUploadTime"], "%Y-%m-%dT%H:%M:%S.%fZ")
 	currentTime = datetime.now()
 	totalDiff = (currentTime-latestUploadTime).total_seconds()
 	uploadShootInterval = cameraConfigDict["uploadShootInterval"]
-	print cameraConfigDict
-	print '------------------------'
-	print uploadShootInterval
-	print totalDiff
+	#print cameraConfigDict
+	#print '------------------------'
+	#print uploadShootInterval
+	#print totalDiff
 	if uploadShootInterval<=totalDiff :
 		connPre = getSqliteDBConnection()
 		execsql = "UPDATE CAMERACONFIG SET latestUploadTime='%s' where serialNumber='%s' " % (str(datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")), str(cameraConfigDict["serialNumber"]),)
@@ -122,9 +149,11 @@ def isTakePhotoOn():
 		return False
 	#execSql = "UPDATE CAMERACONFIG SET cameraType=%d, localShootInterval=%d, uploadShootInterval=%d, workingTime='%s', localResolution='%s', remoteResolution='%s', updateTime='%s', startDate='%s', endDate='%s', uploadPath='%s' where serialNumber='%s' " % (responseJson['rows'][0]['cameraType'], responseJson['rows'][0]['localShootInterval'], responseJson['rows'][0]['uploadShootInterval'], str(responseJson['rows'][0]['workingTime']), str(responseJson['rows'][0]['localResolution']), str(responseJson['rows'][0]['remoteResolution']), str(responseJson['rows'][0]['updateTime']), str(responseJson['rows'][0]['startDate']), str(responseJson['rows'][0]['endDate']), str(responseJson['rows'][0]['uploadPath']),str(responseJson['rows'][0]['serialNumber']),)
 
+
+
 #capture onboard camera image and send to local and remote server
 def captureCSIImageAndSendOut():
-	isOn = isTakePhotoOn()
+	isOn = isLocalTakePhotoOn()
 	if isOn:
 		try:
 			camera.start_preview()
@@ -142,7 +171,7 @@ def captureCSIImageAndSendOut():
 
 #capture usb camera image and send to local and remote server
 def captureUsbImageAndSendOut(usbSerial, usbIndex):
-	isOn = isTakePhotoOn()
+	isOn = isLocalTakePhotoOn()
 	if isOn:
 		print "SHOOOOOTTTTTing USB image"
 		#Image name
@@ -185,8 +214,8 @@ def inspectCameraConfig():
 #Iterate the config table periodically
 ###Interval function to update config
 def inspectCameraConfigIntervalTimer():
+	inspectCameraConfig()
 	#Update every 300 seconds
 	Timer(5, inspectCameraConfigIntervalTimer).start()
-	inspectCameraConfig()
 #Application Start 
 inspectCameraConfigIntervalTimer()
