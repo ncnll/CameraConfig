@@ -23,8 +23,7 @@ pygame.init()
 pygame.camera.init()
 
 #Initiate the camera
-camera = picamera.PiCamera()
-camera.resolution = (1024, 768)
+ 
 
 ###Get current milliseconds
 current_milli_time = lambda: int(round(time.time() * 1000))
@@ -170,13 +169,16 @@ def captureCSIImageAndSendOut():
 	isOn = isLocalTakePhotoOn()
 	if isOn:
 		try:
-			camera.start_preview()
+			camera = picamera.PiCamera()
+			camera.resolution = (1920, 1080)
+			#camera.start_preview()
 			# Camera warm-up time
 			time.sleep(2)
 			#Image name
 			fileName = str(current_milli_time())+".jpg"
 			camera.capture(fileName)
-			camera.stop_preview()
+			camera.close()
+			#camera.stop_preview()
 			print "SHOOOOOTTTTTing CSI image"
 			sendImageToLocalAndRemoteServer(cpu_serial, fileName)
 		except Exception,e:
