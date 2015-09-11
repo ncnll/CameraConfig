@@ -70,8 +70,13 @@ def updateCameraConfig():
 		#Request 
 		para_dct = {}
 		#Get last update time
-		c=conn.execute('SELECT * FROM CAMERACONFIG WHERE serialNumber=?', (serialNumber,))
-		configRow=c.fetchone()
+		try:
+			c=conn.execute('SELECT * FROM CAMERACONFIG WHERE serialNumber=?', (serialNumber,))
+			configRow=c.fetchone()
+		except Exception, e:
+			print e
+			continue
+
 		#if configRow is not None:
 		#	para_dct['search_gt_updateTime'] = configRow[7]
 		#else : 

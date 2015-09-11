@@ -22,8 +22,15 @@ import urllib2
 pygame.init()
 pygame.camera.init()
 
-#Initiate the camera
- 
+##file local storage path
+local_storage_path = '/home/pi/storage/charmyin_uploaded_images/'
+
+#check whether /home/pi/database/uploadConfig.db is exists, if not, create a new one
+def get_storage_path(parent_dir_name):
+	directory_path = local_storage_path+parent_dir_name+"/"
+	if not os.path.exists(directory_path):
+		os.makedirs(directory_path)
+	return directory_path
 
 ###Get current milliseconds
 current_milli_time = lambda: int(round(time.time() * 1000))
@@ -70,9 +77,11 @@ def getCameraConfigInfo(serialNumber):
 		return None
 	else : 
 		print row1[0]
-		cPre=connPre.execute("SELECT * FROM CAMERACONFIG")
+		exec_sql = "SELECT * FROM CAMERACONFIG where serialNumber='%s'" % (str(serialNumber) ,)
+		print exec_sql
+		cPre=connPre.execute(exec_sql)
 		row1 = cPre.fetchone()
-		print row1[0]
+		print row1
 		rowDict = dict_factory(cPre, row1)
 		return rowDict
 
@@ -127,10 +136,10 @@ def isLocalTakePhotoOn():
 	currentTime = datetime.now()
 	totalDiff = (currentTime-latestUploadTime).total_seconds()
 	uploadShootInterval = cameraConfigDict["localShootInterval"]
-	#print cameraConfigDict
-	#print '------------------------'
-	#print uploadShootInterval
-	#print totalDiff
+	print cameraConfigDict
+	print '------------------------'
+	print uploadShootInterval
+	print totalDiff
 	if uploadShootInterval<=totalDiff :
 		connPre = getSqliteDBConnection()
 		execsql = "UPDATE CAMERACONFIG SET latestLocalUploadTime='%s' where serialNumber='%s' " % (str(datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")), str(cameraConfigDict["serialNumber"]),)
@@ -165,7 +174,7 @@ def isRemoteTakePhotoOn():
 
 
 #capture onboard camera image and send to local and remote server
-def captureCSIImageAndSendOut():
+def captureCSIImage():
 	isOn = isLocalTakePhotoOn()
 	if isOn:
 		try:
@@ -174,33 +183,38 @@ def captureCSIImageAndSendOut():
 			#camera.start_preview()
 			# Camera warm-up time
 			time.sleep(2)
+			#Get storage path
+			onboard_storage_path = get_storage_path(cpu_serial)
 			#Image name
-			fileName = str(current_milli_time())+".jpg"
+			fileName = onboard_storage_path+str(current_milli_time())+".jpg"
 			camera.capture(fileName)
 			camera.close()
 			#camera.stop_preview()
 			print "SHOOOOOTTTTTing CSI image"
-			sendImageToLocalAndRemoteServer(cpu_serial, fileName)
+			#sendImageToLocalAndRemoteServer(cpu_serial, fileName)
 		except Exception,e:
 			print str(e)
 
 
 #capture usb camera image and send to local and remote server
-def captureUsbImageAndSendOut(usbSerial, usbIndex):
+def captureUsbImage(usbSerial, usbIndex):
 	isOn = isLocalTakePhotoOn()
 	if isOn:
 		print "SHOOOOOTTTTTing USB image"
+		#Get storage path
+		onboard_storage_path = get_storage_path(usbSerial)
 		#Image name
-		imageName = str(current_milli_time())+".jpg"
+		imageName = onboard_storage_path+str(current_milli_time())+".jpg"
 		#Capture image
 		try:
 			devicePath = "/dev/video"+usbIndex
 			cam = pygame.camera.Camera(devicePath,(1920, 1080))
 			cam.start()
 			image=cam.get_image()
+			#checkImagePath(cpu_serial, fileName)
 			pygame.image.save(image, imageName)
 			cam.stop()
-			sendImageToLocalAndRemoteServer(usbSerial, imageName)
+			#sendImageToLocalAndRemoteServer(usbSerial, imageName)
 		except Exception,e:
 			print str(e)
 	else:
@@ -213,7 +227,7 @@ def inspectCameraConfig():
 	#boardCameraSerialNumber = getCpuSerial()
 	#CSI camera
 	cameraConfigDict = getCameraConfigInfo(cpu_serial)
-	captureCSIImageAndSendOut()
+	captureCSIImage()
 	#Add usb camera serialNumber
 	stdout = os.listdir("/home/pi/v4l/by-id/")
 	for line in stdout:
@@ -225,7 +239,7 @@ def inspectCameraConfig():
 		if isVideoDeviceExists:
 			print 'doing isVideoDeviceExists'
 			cameraConfigDict = getCameraConfigInfo(usbserial)
-			captureUsbImageAndSendOut(usbserial, usbIndex)
+			captureUsbImage(usbserial, usbIndex)
 
 #Iterate the config table periodically
 ###Interval function to update config
