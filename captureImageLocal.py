@@ -233,15 +233,19 @@ def inspectCameraConfig():
 	#CSI camera
 	cameraConfigDict = getCameraConfigInfo(cpu_serial)
 	#if solution has been changed
-	global localResolution 
+	global localResolution
+	global camera
 	if localResolution != cameraConfigDict["localResolution"]:
 		print 'not eauql haha---------------------'+cameraConfigDict["localResolution"]
+		localResolution = cameraConfigDict["localResolution"]
+		#restart camera
+		camera.close()
+		#init picamera
+		camera = picamera.PiCamera()
+		camera.resolution = (int(cameraConfigDict["localResolution"].split("*")[0]), int(cameraConfigDict["localResolution"].split("*")[1]))
 	else:
-		print 'equal'
-	#init picamera
-	#camera = picamera.PiCamera()
-	#camera.resolution = (1920, 1080)
-	#captureCSIImage()
+		print localResolution
+	captureCSIImage()
 
 #Iterate the config table periodically
 ###Interval function to update config
