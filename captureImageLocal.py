@@ -18,12 +18,18 @@ from datetime import datetime
 #(stdout, stderr) = Popen(["cat","foo.txt"], stdout=PIPE).communicate()
 
 import urllib2
-
+#init usb camera
 pygame.init()
 pygame.camera.init()
 
 ##file local storage path
 local_storage_path = '/home/pi/storage/charmyin_uploaded_images/'
+
+localResolution="1920*1080"
+
+#init picamera
+camera = picamera.PiCamera()
+camera.resolution = (1920, 1080)
 
 #check whether /home/pi/database/uploadConfig.db is exists, if not, create a new one
 def get_storage_path(parent_dir_name):
@@ -136,10 +142,10 @@ def isLocalTakePhotoOn():
 	currentTime = datetime.now()
 	totalDiff = (currentTime-latestUploadTime).total_seconds()
 	uploadShootInterval = cameraConfigDict["localShootInterval"]
-	print cameraConfigDict
-	print '------------------------'
-	print uploadShootInterval
-	print totalDiff
+	#print cameraConfigDict
+	#print '------------------------'
+	#print uploadShootInterval
+	#print totalDiff
 	if uploadShootInterval<=totalDiff :
 		connPre = getSqliteDBConnection()
 		execsql = "UPDATE CAMERACONFIG SET latestLocalUploadTime='%s' where serialNumber='%s' " % (str(datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")), str(cameraConfigDict["serialNumber"]),)
@@ -178,17 +184,16 @@ def captureCSIImage():
 	isOn = isLocalTakePhotoOn()
 	if isOn:
 		try:
-			camera = picamera.PiCamera()
-			camera.resolution = (1920, 1080)
+			
 			#camera.start_preview()
 			# Camera warm-up time
-			time.sleep(2)
+			#time.sleep(1)
 			#Get storage path
 			onboard_storage_path = get_storage_path(cpu_serial)
 			#Image name
 			fileName = onboard_storage_path+str(current_milli_time())+".jpg"
 			camera.capture(fileName)
-			camera.close()
+			#camera.close()
 			#camera.stop_preview()
 			print "SHOOOOOTTTTTing CSI image"
 			#sendImageToLocalAndRemoteServer(cpu_serial, fileName)
@@ -227,25 +232,22 @@ def inspectCameraConfig():
 	#boardCameraSerialNumber = getCpuSerial()
 	#CSI camera
 	cameraConfigDict = getCameraConfigInfo(cpu_serial)
-	captureCSIImage()
-	#Add usb camera serialNumber
-	stdout = os.listdir("/home/pi/v4l/by-id/")
-	for line in stdout:
-		usbserial=line[4:22]
-		usbIndex=line[-1:]
-		#check is device exists
-		isVideoDeviceExists = os.path.exists("/dev/video"+usbIndex)
-		#print isVideoDeviceExists
-		if isVideoDeviceExists:
-			print 'doing isVideoDeviceExists'
-			cameraConfigDict = getCameraConfigInfo(usbserial)
-			captureUsbImage(usbserial, usbIndex)
+	#if solution has been changed
+	global localResolution 
+	if localResolution != cameraConfigDict["localResolution"]:
+		print 'not eauql haha---------------------'+cameraConfigDict["localResolution"]
+	else:
+		print 'equal'
+	#init picamera
+	#camera = picamera.PiCamera()
+	#camera.resolution = (1920, 1080)
+	#captureCSIImage()
 
 #Iterate the config table periodically
 ###Interval function to update config
 def inspectCameraConfigIntervalTimer():
 	inspectCameraConfig()
 	#Update every 300 seconds
-	Timer(5, inspectCameraConfigIntervalTimer).start()
+	Timer(1, inspectCameraConfigIntervalTimer).start()
 #Application Start 
 inspectCameraConfigIntervalTimer()
