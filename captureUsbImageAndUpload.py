@@ -70,7 +70,7 @@ def getCameraConfigInfo(serialNumber):
 		return None
 	else : 
 		print row1[0]
-		cPre=connPre.execute("SELECT * FROM CAMERACONFIG")
+		cPre=connPre.execute("SELECT * FROM CAMERACONFIG where serialNumber='%s'" % (serialNumber,))
 		row1 = cPre.fetchone()
 		print row1[0]
 		rowDict = dict_factory(cPre, row1)
@@ -86,7 +86,7 @@ def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
 	#Send to local server
 	register_openers()#Why to use this?
 	with open(uploadImageName, 'r') as f:
-		datagen, headers = multipart_encode({"file":f,"serialNumber":configDict["serialNumber"],"index":"0", "viewIndex":"0", "cameraBoardUploadTime":str(current_milli_time())})
+		datagen, headers = multipart_encode({"file":f,"cameraSerialId":configDict["serialNumber"], "deviceCpuId":cpu_serial,"index":"0", "viewIndex":"0", "cameraBoardUploadTime":str(current_milli_time())})
 		#request = urllib2.Request("http://192.168.1.105:3000/index/uploadCameraPhoto", datagen, headers)
 		#url should load from server, or changed by hand
 		#request = urllib2.Request("http://192.168.1.105:3000/upload/single", datagen, headers)
@@ -95,7 +95,7 @@ def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
 		request = urllib2.Request("http://192.168.1.105:3000/upload/single", datagen, headers)
 		try:
 			response = urllib2.urlopen(request,timeout=30)
-			#print response.read()
+			print response.read()
 			print "local is ok"
 		except Exception, e:
 			print e
@@ -104,7 +104,7 @@ def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
 		#Send to remote server
 		is_remote_on = isRemoteTakePhotoOn()
 		if is_remote_on:
-			datagen, headers = multipart_encode({"file":f,"serialNumber":configDict["serialNumber"],"index":"0", "viewIndex":"0", "cameraBoardUploadTime":str(current_milli_time())})
+			datagen, headers = multipart_encode({"file":f,"cameraSerialId":configDict["serialNumber"],"deviceCpuId":cpu_serial,"index":"0", "viewIndex":"0", "cameraBoardUploadTime":str(current_milli_time())})
 			print f
 			#request = urllib2.Request("http://192.168.1.105:3000/index/uploadCameraPhoto", datagen, headers)
 			#url should load from server, or changed by hand
@@ -114,7 +114,7 @@ def sendImageToLocalAndRemoteServer(serialNumber, uploadImageName):
 			request = urllib2.Request("http://www.ncnll.com:3000/upload/single", datagen, headers)
 			try:
 				response = urllib2.urlopen(request,timeout=30)
-				#print response.read()
+				print response.read()
 				print "remote is ok"
 			except Exception, e:
 				print e
@@ -127,10 +127,10 @@ def isLocalTakePhotoOn():
 	currentTime = datetime.now()
 	totalDiff = (currentTime-latestUploadTime).total_seconds()
 	uploadShootInterval = cameraConfigDict["localShootInterval"]
-	#print cameraConfigDict
-	#print '------------------------'
-	#print uploadShootInterval
-	#print totalDiff
+	print cameraConfigDict
+	print '------------------------'
+	print uploadShootInterval
+	print totalDiff
 	if uploadShootInterval<=totalDiff :
 		connPre = getSqliteDBConnection()
 		execsql = "UPDATE CAMERACONFIG SET latestLocalUploadTime='%s' where serialNumber='%s' " % (str(datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")), str(cameraConfigDict["serialNumber"]),)
@@ -170,6 +170,7 @@ def captureCSIImageAndSendOut():
 	if isOn:
 		try:
 			camera = picamera.PiCamera()
+			#cameraConfigDict["latestLocalUploadTime"]
 			camera.resolution = (1920, 1080)
 			#camera.start_preview()
 			# Camera warm-up time

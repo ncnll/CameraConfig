@@ -1,5 +1,20 @@
 #!/usr/bin/python
+
+from threading import Timer
+from threading import Thread
+
 import time
+import picamera
+import threading
+
+
+
+#!/usr/bin/env python
+#coding:utf8
+
+import os
+import logging
+
 from datetime import datetime
 #from dateutil.parser import parse
 #current_milli_time = lambda: int(round(time.time() * 1000))
@@ -43,3 +58,19 @@ print secondsBetween/60
 
 
 print datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+#Get raspberry pi serial id
+def getserial():
+	# Extract serial from cpuinfo file
+	cpuserial = "0000000000000000"
+	try:
+		f = open('/proc/cpuinfo','r')
+		for line in f:
+			if line[0:6]=='Serial':
+				cpuserial = line[10:26]
+		f.close()
+	except:
+	  cpuserial = "ERROR000000000"
+	return cpuserial
+print getserial()

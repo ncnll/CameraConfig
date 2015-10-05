@@ -111,7 +111,7 @@ def updateCameraConfig():
 ###Interval function to update config
 def updateCameraConfigIntervalTimer():
 	#Update every 300 seconds
-	Timer(3, updateCameraConfigIntervalTimer).start()
+	Timer(15, updateCameraConfigIntervalTimer).start()
 	print "1"
 	updateCameraConfig()
 #Application Start 
